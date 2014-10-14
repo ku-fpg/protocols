@@ -25,10 +25,19 @@ program = proc _inp -> do
         r' <- waveform (500,100) (10,1) -< t'
 	t2 <- noise (mkStdGen 0) -< ()
         r2 <- waveform (500,100) (10,1) -< t2
+        t3 <- (integral <<< arr (\ x -> x - 0.5)) -< t2
+        r3 <- waveform (500,100) (10,1) -< t3
+        t4 <- arr (\x -> fromIntegral x/100) <<< sps -< ()
+        r4 <- waveform (500,100) (10,1) -< t4
         rs <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (0,n) ; c }
                                      | (n,c) <- [0,100..] `zip` cs
-                                     ]) -< [r,r',r2]
+                                     ]) -< [r,r',r2,r3,r4]
 	returnA -< rs
+
+-- how may samples per second?
+sps :: SF () Int
+sps = time >>> sscan (\ vs tm -> tm : [ v | v <- vs, v >= tm - 1]) [] >>> arr length
+
 
 waveform :: (Double,Double) -> (Double,Double) -> SF Double (Canvas ())
 waveform (w,h) (ws,hs) = proc inp -> do
