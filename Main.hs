@@ -19,16 +19,16 @@ main = blankCanvas 3000 $
 
 program :: SF (Event ()) (Canvas ())
 program = proc _inp -> do
-	t <- (arr (\ x -> (x + 1) / 2) <<< arr ( sin  . (/ 0.2)) <<< time) -< ()
-        r <- waveform (500,100) (10,1) -< t
-	t' <- (arr (\ x -> (x + 1) / 2) <<< integral <<< arr (sin  . (/ 0.2)) <<< time) -< ()
-        r' <- waveform (500,100) (10,1) -< t'
+        w <- arr (sin . (/ 0.2)) <<< time -< ()
+        r <- waveform defaultWaveform { waveformRange = (-1,1) } -< w
+	wi <- integral -< w
+        r' <- waveform defaultWaveform { waveformRange = (-1,1) } -< wi
 	t2 <- noise (mkStdGen 0) -< ()
-        r2 <- waveform (500,100) (10,1) -< t2
+        r2 <- waveform' (500,100) (10,1) -< t2
         t3 <- (integral <<< arr (\ x -> x - 0.5)) -< t2
-        r3 <- waveform (500,100) (10,1) -< t3
+        r3 <- waveform' (500,100) (10,1) -< t3
         t4 <- arr (\x -> fromIntegral x/100) <<< sps -< ()
-        r4 <- waveform (500,100) (10,1) -< t4
+        r4 <- waveform' (500,100) (10,1) -< t4
         rs <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (0,n) ; c }
                                      | (n,c) <- [0,100..] `zip` cs
                                      ]) -< [r,r',r2,r3,r4]
@@ -38,9 +38,20 @@ program = proc _inp -> do
 sps :: SF () Int
 sps = time >>> sscan (\ vs tm -> tm : [ v | v <- vs, v >= tm - 1]) [] >>> arr length
 
+data Waveform = Waveform 
+        { waveformRealEstate :: (Double,Double) -- size on screen
+        , waveformTime       :: Double          -- length of time to record
+        , waveformRange      :: (Double,Double) -- min and max values
+        }
 
-waveform :: (Double,Double) -> (Double,Double) -> SF Double (Canvas ())
-waveform (w,h) (ws,hs) = proc inp -> do
+defaultWaveform = Waveform (500,100) 10 (0,1)
+
+waveform :: Waveform -> SF Double (Canvas ())
+waveform (Waveform (w,h) ws (mn,mx)) = arr norm >>> waveform' (w,h) (ws,1)
+  where norm d = (max mn (min mx d) - mn) / (mx - mn)
+        
+waveform' :: (Double,Double) -> (Double,Double) -> SF Double (Canvas ())
+waveform' (w,h) (ws,hs) = proc inp -> do
 	 t <- time -< ()
 	 st <- sscan (\ vs (tm,v) -> (tm / ws,v) : [ v | v@(tm',_) <- vs,  tm'  >= tm / ws - 1 ]) [] -< (t,inp)
          st' <- arr norm -< st
@@ -69,13 +80,15 @@ fn (ws,hs) xys = saveRestore $ do
         arc(fst $ head $ xys', snd $ head $ xys', 5, 0, 2 * pi, False)
         fillStyle "blue"
         stroke()
-
   where
         xys' = [ (x * ws, (1 - y) * hs) | (x,y) <- xys ]
 
 
 -----------------------------------------------
 
+-- An event timeline.
+timeline :: Waveform -> SF (Event String) (Canvas ())
+timeline = undefined
 
 showCanvasSF :: (Show a) => SF a (Canvas ())
 showCanvasSF = arr $ \ a -> saveRestore $ do
