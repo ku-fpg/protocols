@@ -30,10 +30,21 @@ program = proc _inp -> do
         r3 <- waveform defaultWaveform { waveformRange = (-1,1) } -< t3
         t4 <- arr fromIntegral  <<< sps -< ()
         r4 <- waveform defaultWaveform { waveformRange = (0,100) } -< t4
+
+        -- sscan :: (b -> a -> b) -> b -> SF a b
+        t5 <- arr (\ x -> if isEvent x then 1 else 0) <<< repeatedly 1 () -< ()
+        r5 <- waveform defaultWaveform { waveformRange = (0,1) } -< t5
+
         rs <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (0,10 + n) ; c }
                                      | (n,c) <- [0,120..] `zip` cs
                                      ]) -< [r,r',r2,r3,r4]
-	returnA -< rs
+
+        rX <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (550,10 + n) ; c }
+                                     | (n,c) <- [0,120..] `zip` cs
+                                     ]) -< [r5]
+
+
+	returnA -< (rs >> rX)
 
 -- how may samples per second?
 sps :: SF () Int
