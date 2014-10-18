@@ -49,12 +49,3 @@ program = proc _inp -> do
 	returnA -< (rs >> rX)
 
 -----------------------------------------------
-
--- This should move to the bridge library
-record :: Double                    -- ^ frames per second
-       -> Time                      -- ^ end of time (start is always 0)
-       -> [(Time,a)]                -- ^ event values, with timestamp
-       -> FilePath                  -- ^ directory to put the png files into
-       -> SF (Event a) (Canvas ())  -- Signal Function 
-       -> IO ()
-record = undefined

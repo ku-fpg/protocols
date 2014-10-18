@@ -19,3 +19,13 @@ spsSF = time >>> sscan (\ vs tm -> tm : [ v | v <- vs, v >= tm - 1]) [] >>> arr 
   where len []  = 0
         len [x] = 1
         len xs  = fromIntegral (length xs) / (maximum xs - minimum xs) 
+
+
+-- This should move to the bridge library
+record :: Double                    -- ^ frames per second
+       -> Time                      -- ^ end of time (start is always 0)
+       -> [(Time,a)]                -- ^ event values, with timestamp
+       -> FilePath                  -- ^ directory to put the png files into
+       -> SF (Event a) (Canvas ())  -- Signal Function 
+       -> IO ()
+record = undefined
