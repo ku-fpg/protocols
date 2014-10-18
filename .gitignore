@@ -3,3 +3,5 @@ dist/
 \#*
 *.hi
 *.o
+KEEP.txt
+
