@@ -36,9 +36,6 @@ program = proc _inp -> do
         t5 <- repeatedly 1 () -< ()
         r5 <- timelineSF def -< t5
 
-        t6 <- arr (\ x -> if isEvent x then 1 else 0) -< t5
-        r6 <- waveform def { waveformRange = (0,1) } -< t6
-
 
         rs <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (0,10 + n) ; c }
                                      | (n,c) <- [0,120..] `zip` cs
@@ -46,7 +43,7 @@ program = proc _inp -> do
 
         rX <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (550,10 + n) ; c }
                                      | (n,c) <- [0,120..] `zip` cs
-                                     ]) -< [r5,r6]
+                                     ]) -< [r5]
 
 
 	returnA -< (rs >> rX)

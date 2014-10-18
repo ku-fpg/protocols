@@ -24,12 +24,11 @@ data Timeline a = Timeline
         { timelineRealEstate  :: (Double,Double)        -- ^ size on screen
         , timelineTime        :: Double                 -- ^ length of time to record
         , timelineFont        :: Text                   -- ^ sans-serif
-        , timelineAbove       :: Time -> a -> String    -- ^ above the dot, default time
-        , timelineBelow       :: Time -> a -> String    -- ^ below the dot, default empty
+        , timelineShow        :: Time -> a -> String    -- ^ below the dot, default's to time
         }
 
 instance Default (Timeline a) where
-  def = Timeline (500,100) 10 "10pt sans-serif" (\ a _ -> printf "%.2f" a) (\ _ a -> "")
+  def = Timeline (500,100) 10 "10pt sans-serif" (\ a _ -> printf "%.2f" a)
 
 -- The pure painter
 timelinePaint :: Timeline a -> [(Time,Event a)] -> Canvas ()
@@ -37,19 +36,25 @@ timelinePaint tl ts | length ts < 1 = return ()
 timelinePaint tl ts = do
         strokeStyle "blue"
         -- find y-axis
-        let y_axis = h / 2
+        let y_axis = 10
         beginPath()
         -- (mn,mx)
         moveTo (0,y_axis)
         lineTo (w,y_axis)
-        lineWidth 1
+        lineWidth 0.5
         stroke()
         sequence_ [ do
                beginPath()
                let x = (1 + (t - mx) / timelineTime tl) * w
                arc (x,y_axis,3,0,2*pi,False) 
+               lineWidth 1
                fillStyle "blue"
                fill() 
+               textBaseline "middle"
+               saveRestore $ do
+                       translate(x,y_axis)
+                       rotate(1)
+                       fillText (pack $ timelineShow tl t e,8,0)
             | (t,e) <- ts1 ]
 
   where ts1 = [ (t,e) | (t,Just e) <- [ (t,event Nothing Just ev) | (t,ev) <- ts ] ]
