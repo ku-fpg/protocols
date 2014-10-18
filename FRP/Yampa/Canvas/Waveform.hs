@@ -30,7 +30,7 @@ data Waveform = Waveform
         }
 
 instance Default Waveform where
-  def = Waveform (500,100) 10 (0,1) "10pt sans-serif" "%.2f" False
+  def = Waveform (500,100) 10 (0,1) "10pt sans-serif" "%.2f" True
 
 -- The pure painter
 waveformPaint :: Waveform -> [(Time,Double)] -> Canvas ()

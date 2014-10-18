@@ -8,8 +8,9 @@ import Data.Default
 
 import FRP.Yampa.Canvas
 
-import FRP.Yampa.Canvas.Waveform 
 import FRP.Yampa.Canvas.Utils 
+import FRP.Yampa.Canvas.Waveform 
+import FRP.Yampa.Canvas.Timeline
 
 
 main :: IO ()
@@ -28,12 +29,16 @@ program = proc _inp -> do
         r2 <- waveform def { waveformRange = (0,1) } -< t2
         t3 <- (integral <<< arr (\ x -> x - 0.5)) -< t2
         r3 <- waveform def { waveformRange = (-1,1) } -< t3
-        t4 <- arr fromIntegral  <<< spsSF -< ()
+        t4 <- spsSF -< ()
         r4 <- waveform def { waveformRange = (0,100) } -< t4
 
         -- sscan :: (b -> a -> b) -> b -> SF a b
-        t5 <- arr (\ x -> if isEvent x then 1 else 0) <<< repeatedly 1 () -< ()
-        r5 <- waveform def { waveformRange = (0,1) } -< t5
+        t5 <- repeatedly 1 () -< ()
+        r5 <- timelineSF def -< t5
+
+        t6 <- arr (\ x -> if isEvent x then 1 else 0) -< t5
+        r6 <- waveform def { waveformRange = (0,1) } -< t6
+
 
         rs <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (0,10 + n) ; c }
                                      | (n,c) <- [0,120..] `zip` cs
@@ -41,16 +46,12 @@ program = proc _inp -> do
 
         rX <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (550,10 + n) ; c }
                                      | (n,c) <- [0,120..] `zip` cs
-                                     ]) -< [r5]
+                                     ]) -< [r5,r6]
 
 
 	returnA -< (rs >> rX)
 
 -----------------------------------------------
-
--- An event timeline.
-timeline :: Waveform -> SF (Event String) (Canvas ())
-timeline = undefined
 
 -- This should move to the bridge library
 record :: Double                    -- ^ frames per second
