@@ -30,9 +30,12 @@ program = proc _inp -> do
         t7' <- arr (\ x -> if x == Space then 1.0 else 0.0) -< t7
         r7 <- waveform def { waveformTime = 20, waveformRealEstate = (1000,100) } -< t7'
 
+        t1 <- waitForSpace 4 -< t7
+        r8 <- timelineSF def { timelineTime = 20, timelineRealEstate = (1000,100) } -< t1
+
         rs <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (0,10 + n) ; c }
                                      | (n,c) <- [0,120..] `zip` cs
-                                     ]) -< [r6,r7]
+                                     ]) -< [r6,r7,r8]
 
 
 	returnA -< rs
@@ -63,7 +66,27 @@ data Ack = Ack
 rs232_Tx' :: Int -> SF (Event Word8) (Event Ack,Line)
 rs232_Tx' = undefined
 
-rs232_rx :: Int -> SF Line (Event Word8)
-rs232_rx baud = undefined
+--rs232_rx :: Int -> SF Line (Event ()) -- (Event Word8)
+--rs232_rx baud = waitForSpace baud `switch` \ () ->
+        
 
+-- This says nothing about frequency of sampling, which
+-- is (from FPGA hacking) typically 16x the baud rate.
+waitForSpace :: Int -> SF Line (Event Time)
+waitForSpace baud = (arr f >>> edge >>> delayEvent (1 / (2 * fromIntegral baud))) >>> timeEvents
+        
+  where f Space = True
+        f Mark   = False
+
+-- The first event is given time 0.
+timeEvents :: SF (Event a) (Event Time)
+timeEvents = (never &&& identity) `switch` \ _ -> 
+        proc inp -> do 
+                r <- now ()                                     -< ()
+                t <- time                                       -< ()
+                arr (\ (t,r) -> tagWith t r) -< (t,r)
+
+-- This is a type of bind!
+--bind :: SF a (Event b) -> (b -> SF a (Event b)) -> SF a (Event b)
+--s `bind` k = s `switch` k
 
