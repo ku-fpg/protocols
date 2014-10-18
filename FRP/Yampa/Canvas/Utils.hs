@@ -20,7 +20,7 @@ spsSF = time >>> sscan (\ vs tm -> tm : [ v | v <- vs, v >= tm - 1]) [] >>> arr 
         len [x] = 1
         len xs  = fromIntegral (length xs) / (maximum xs - minimum xs) 
 
-
+{-
 -- This should move to the bridge library
 record :: Double                    -- ^ frames per second
        -> Time                      -- ^ end of time (start is always 0)
@@ -29,3 +29,4 @@ record :: Double                    -- ^ frames per second
        -> SF (Event a) (Canvas ())  -- Signal Function 
        -> IO ()
 record = undefined
+-}
