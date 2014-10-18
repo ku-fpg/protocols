@@ -1,5 +1,9 @@
 {-# LANGUAGE OverloadedStrings, TupleSections, Arrows #-}
-module Main where
+module FRP.Yampa.Canvas.Waveform 
+        ( Waveform(..)
+        , waveformPaint
+        , waveform
+        ) where
 
 import Graphics.Blank hiding (Event)
 import FRP.Yampa
@@ -9,65 +13,37 @@ import Data.Monoid((<>))
 import Control.Arrow
 import System.Random(mkStdGen)
 import Text.Printf
+import Data.Default
 
 import FRP.Yampa.Canvas
 
-main :: IO ()
-main = blankCanvas 3000 $
-       reactimateSFinContext (\ _ -> return NoEvent) id program
+import FRP.Yampa.Canvas.Utils
 
---	  sscan (\ :: (b -> a -> b) -> b -> SF a b
-
-program :: SF (Event ()) (Canvas ())
-program = proc _inp -> do
-        w <- arr (sin . (/ 0.2)) <<< time -< ()
-        r <- waveform defaultWaveform { waveformRange = (-1,1) } -< w
-	wi <- integral -< w
-        r' <- waveform defaultWaveform { waveformRange = (0,1) } -< wi
-	t2 <- noise (mkStdGen 0) -< ()
-        r2 <- waveform defaultWaveform { waveformRange = (0,1) } -< t2
-        t3 <- (integral <<< arr (\ x -> x - 0.5)) -< t2
-        r3 <- waveform defaultWaveform { waveformRange = (-1,1) } -< t3
-        t4 <- arr fromIntegral  <<< sps -< ()
-        r4 <- waveform defaultWaveform { waveformRange = (0,100) } -< t4
-
-        -- sscan :: (b -> a -> b) -> b -> SF a b
-        t5 <- arr (\ x -> if isEvent x then 1 else 0) <<< repeatedly 1 () -< ()
-        r5 <- waveform defaultWaveform { waveformRange = (0,1) } -< t5
-
-        rs <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (0,10 + n) ; c }
-                                     | (n,c) <- [0,120..] `zip` cs
-                                     ]) -< [r,r',r2,r3,r4]
-
-        rX <- arr (\ cs -> sequence_ [ saveRestore $ do { translate (550,10 + n) ; c }
-                                     | (n,c) <- [0,120..] `zip` cs
-                                     ]) -< [r5]
-
-
-	returnA -< (rs >> rX)
-
--- how may samples per second?
-sps :: SF () Int
-sps = time >>> sscan (\ vs tm -> tm : [ v | v <- vs, v >= tm - 1]) [] >>> arr length
 
 data Waveform = Waveform 
-        { waveformRealEstate :: (Double,Double) -- size on screen
-        , waveformTime       :: Double          -- length of time to record
-        , waveformRange      :: (Double,Double) -- min and max values
-        , waveformFont       :: Text            -- sans-serif
-        , waveformString     :: String          -- formatting for y-axis label
+        { waveformRealEstate  :: (Double,Double) -- ^ size on screen
+        , waveformTime        :: Double          -- ^ length of time to record
+        , waveformRange       :: (Double,Double) -- ^ min and max values
+        , waveformFont        :: Text            -- ^ sans-serif
+        , waveformString      :: String          -- ^ formatting for y-axis label
+        , waveformInterpolate :: Bool            -- ^ do we draw lines between the points?
         }
 
-defaultWaveform = Waveform (500,100) 10 (0,1) "10pt sans-serif" "%.2f"
+instance Default Waveform where
+  def = Waveform (500,100) 10 (0,1) "10pt sans-serif" "%.2f" False
 
+-- The pure painter
+waveformPaint :: Waveform -> [(Time,Double)] -> Canvas ()
+waveformPaint = undefined
+
+-- The signal function version
 waveform :: Waveform -> SF Double (Canvas ())
-waveform (Waveform (w,h) ws (mn,mx) theFont st) = proc inp -> do
+waveform (Waveform (w,h) ws (mn,mx) theFont st interp) = proc inp -> do
          t    <- time -< ()
          inp' <- arr norm' -< inp
 	 st   <- sscan (\ vs (tm,v) -> (tm / ws,v) : [ v | v@(tm',_) <- vs,  tm'  >= tm / ws - 1 ]) [] -< (t,inp')
          st'  <- arr norm -< st
          c1   <- arr (fn (w,h)) -< st'
-         c2   <- showCanvasSF -< st
 	 returnA -< c1
   where
         -- The values are in the range (0,1) in both the x and y directions.
@@ -87,14 +63,20 @@ waveform (Waveform (w,h) ws (mn,mx) theFont st) = proc inp -> do
                 lineTo (w,h)
                 lineWidth 0.5
                 stroke()
+                if interp
+                then do beginPath()
+                        moveTo $ head $ xys'
+                        mapM_ lineTo $ tail $ xys'
+                        lineWidth 1
+                        strokeStyle "blue"
+                        stroke()
+                else sequence_ $ [ do 
+                        beginPath()
+                        arc (fst xy,snd xy,1,0,2*pi,False) 
+                        fillStyle "blue"
+                        fill() | xy <- tail $ xys' ]
                 beginPath()
-                moveTo $ head $ xys'
-                mapM_ lineTo $ tail $ xys'
-                lineWidth 1
-                strokeStyle "blue"
-                stroke()
-                beginPath()
-                arc(fst $ head $ xys', snd $ head $ xys', 3, 0, 2 * pi, False)
+                arc(fst $ head $ xys', snd $ head $ xys', 2, 0, 2 * pi, False)
                 fillStyle "blue"
                 fill()
                 font theFont
@@ -123,7 +105,6 @@ waveform' (w,h) (ws,hs) = proc inp -> do
          st' <- arr norm -< st
          st2 <- arr (\ _ -> [(1.0,1.0),(0.99,0.0),(0,0)]) -< ()
          c1 <- arr (fn (w,h)) -< st'
-         c2 <- showCanvasSF -< st
 	 returnA -< c1
   where
         norm :: [ (Double,Double)] -> [(Double,Double)]
@@ -149,23 +130,3 @@ fn (ws,hs) xys = saveRestore $ do
   where
         xys' = [ (x * ws, (1 - y) * hs) | (x,y) <- xys ]
 
-
------------------------------------------------
-
--- An event timeline.
-timeline :: Waveform -> SF (Event String) (Canvas ())
-timeline = undefined
-
-showCanvasSF :: (Show a) => SF a (Canvas ())
-showCanvasSF = arr $ \ a -> saveRestore $ do
-        font "8pt Comic Sans MS"
-        fillText (pack (show a),50,50)
-
--- This should move to the bridge library
-record :: Double                    -- ^ frames per second
-       -> Time                      -- ^ end of time (start is always 0)
-       -> [(Time,a)]                -- ^ event values, with timestamp
-       -> FilePath                  -- ^ directory to put the png files into
-       -> SF (Event a) (Canvas ())  -- Signal Function 
-       -> IO ()
-record = undefined
