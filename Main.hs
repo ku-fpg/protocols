@@ -20,25 +20,25 @@ import Data.Bits
 
 main :: IO ()
 main = blankCanvas 3000 $
-       reactimateVirtualSFinContext 0.01 10 (\ _ -> NoEvent) program 
+       reactimateVirtualSFinContext 0.02 10 (\ _ -> NoEvent) program 
 
 program :: SF (Event ()) (Canvas ())
 program = proc _inp -> do
         t6 <- afterEach [(1 / fromIntegral baud * 16,i) | i <- [0..255]] -< ()
-        r6 <- timelineSF def { timelineTime = 20, timelineRealEstate = (1000,100), timelineShow = \ _ a -> show a } -< t6
+        r6 <- timelineSF def { timelineTime = timeslice, timelineRealEstate = (1000,100), timelineShow = \ _ a -> show a } -< t6
 
         t7 <- rs232_Tx baud -< t6
         t7' <- arr (\ x -> if x == Space then 1.0 else 0.0) -< t7
-        r7 <- waveform def { waveformTime = 20, waveformRealEstate = (1000,100) } -< t7'
+        r7 <- waveform def { waveformTime = timeslice, waveformRealEstate = (1000,100) } -< t7'
 
         t1 <- waitForSpace baud -< t7
-        r8 <- timelineSF def { timelineTime = 20, timelineRealEstate = (1000,100) } -< t1
+        r8 <- timelineSF def { timelineTime = timeslice, timelineRealEstate = (1000,100) } -< t1
 
         t2 <- pulses baud -< t1
-        r2 <- timelineSF def { timelineTime = 20, timelineRealEstate = (1000,100), timelineShow = \ v a -> printf "%.2f" v ++ " " ++ printf "%.2f" a } -< t2
+        r2 <- timelineSF def { timelineTime = timeslice, timelineRealEstate = (1000,100), timelineShow = \ v a -> printf "%.2f" v ++ " " ++ printf "%.2f" a } -< t2
 
         t3 <- rs232_rx baud -< t7
-        r3 <- timelineSF def { timelineTime = 20, timelineRealEstate = (1000,100)
+        r3 <- timelineSF def { timelineTime = timeslice, timelineRealEstate = (1000,100)
                              , timelineShow = \ _ vs -> show vs
                              } -< t3
 
@@ -49,6 +49,7 @@ program = proc _inp -> do
 
 	returnA -< rs
   where baud = 1
+        timeslice = 100
 -----------------------------------------------
 
 data Line = Space | Mark deriving (Eq,Ord,Show)
@@ -129,7 +130,7 @@ onEvent k = (never &&& identity) `switch` k
 pulses :: Int -> SF (Event Time) (Event Double)
 pulses baud = onEvent $ \ t0 -> proc _ -> do
          p <- afterEach [ (w / fromIntegral baud,())
-                        | w <- 0.5 : repeat 1.01
+                        | w <- 0.5 : repeat 1.0
                         ]                                            -< ()
          t <- time                                                   -< ()
          r <- arr (\ (p',t') -> fmap (\ () -> fromIntegral baud * (t' - t0) - 0.5) p')                -< (p,t)

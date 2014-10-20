@@ -36,12 +36,20 @@ instance Default Waveform where
 waveformPaint :: Waveform -> [(Time,Double)] -> Canvas ()
 waveformPaint = undefined
 
+-- Record the significant changes.
+--shrink :: Double -> (Time,Double) -> [(Time,Double)] -> [(Time,Double)]
+--shrink
+
+mesh ((a1,b1):(a2,b2):(a3,b3):abs) | b1 == b2 && b2 == b3 = mesh ((a1,b1):(a3,b3):abs)
+mesh (ab:abs) = ab : mesh abs
+mesh [] = []
+
 -- The signal function version
 waveform :: Waveform -> SF Double (Canvas ())
 waveform (Waveform (w,h) ws (mn,mx) theFont st interp) = proc inp -> do
          t    <- time -< ()
          inp' <- arr norm' -< inp
-	 st   <- sscan (\ vs (tm,v) -> (tm / ws,v) : [ v | v@(tm',_) <- vs,  tm'  >= tm / ws - 1 ]) [] -< (t,inp')
+	 st   <- sscan (\ vs (tm,v) -> (tm / ws,v) : mesh [ v | v@(tm',_) <- vs,  tm'  >= tm / ws - 1 ]) [] -< (t,inp')
          st'  <- arr norm -< st
          c1   <- arr (fn (w,h)) -< st'
 	 returnA -< c1
@@ -84,6 +92,8 @@ waveform (Waveform (w,h) ws (mn,mx) theFont st interp) = proc inp -> do
                 fillText (pack $ printf st mx,w + 5,0)
                 fillText (pack $ printf st mn,w + 5,h)
                 fillText (pack $ printf st $ ((+) mn) $ (* (mx - mn)) $ snd $ head $ xys,w + 5,snd $ head $ xys')
+                fillText (pack $ show (length xys),20,20)
+
           where
                 xys' = [ (x * ws, (1 - y) * hs) | (x,y) <- xys ]
 
