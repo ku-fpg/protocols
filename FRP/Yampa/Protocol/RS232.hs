@@ -3,12 +3,6 @@ module FRP.Yampa.Protocol.RS232 where
 
 import FRP.Yampa
 
-import FRP.Yampa.Canvas.Utils 
-import FRP.Yampa.Canvas.Waveform 
-import FRP.Yampa.Canvas.Timeline
-import FRP.Yampa.Canvas.Virtual
-
-
 import Text.Printf
 
 import Data.Word (Word8)
@@ -39,7 +33,7 @@ rs232_Tx' :: Int -> SF (Event Word8) (Event Ack,Line)
 rs232_Tx' = undefined
 
 rs232_rx :: Int -> SF Line (Event Rx232)
-rs232_rx baud = (rs232_single_rx baud >>> arr (\ a -> (a,a))) `dSwitch` (\ t  -> rs232_rx baud)
+rs232_rx baud = (rs232_single_rx baud >>> arr (\ a -> (a,a))) `dSwitch` (\ _ -> rs232_rx baud)
 -- nt --> rs232_rx baud)
 
 rs232_single_rx :: Int -> SF Line (Event Rx232)
@@ -51,12 +45,12 @@ rs232_single_rx baud = proc inp -> do
 --        (onEvent $ \ c -> now c)  -< results
   where f (Progress i w) (t,ln) = case (i,round t,ln) of
                  (0,0,Space) -> Progress 1 0
-                 (0,_,_)     -> Failed $ show ("failed start bit",i,printf "%.2f" t::String,ln)
+                 (0,_,_)     -> Failed $ show ("failed start bit"::String,i,printf "%.2f" t::String,ln)
                  (9,9,Mark)  -> Done w
-                 (9,_,_)     -> Failed $ show ("failed stop bit",i,printf "%.2f" t::String,ln)
-                 (i,j,x)| i == j 
-                             -> Progress (i+1) (if x == Mark then setBit w (i-1) else w)
-                 _           -> Failed "general failure"
+                 (9,_,_)     -> Failed $ show ("failed stop bit"::String,i,printf "%.2f" t::String,ln)
+                 (i',j,x)| i' == j 
+                               -> Progress (i'+1) (if x == Mark then setBit w (i'-1) else w)
+                 _             -> Failed "general failure"
         f (Done _)       _  = Failed "too many events" -- should be no more events after finishing
         f (Failed m)     _  = Failed m
   
@@ -68,17 +62,17 @@ data Rx232 = Progress Int Word8
 -- This says nothing about frequency of sampling, which
 -- is (from FPGA hacking) typically 16x the baud rate.
 waitForSpace :: Int -> SF Line (Event Time)
-waitForSpace baud = arr f >>> edge >>> timeEvents
+waitForSpace _ = arr f >>> edge >>> timeEvents
   where f Space = True
         f Mark   = False
 
 -- The first event turned into a time event.
 timeEvents :: SF (Event a) (Event Time)
 timeEvents = (never &&& identity) `switch` \ _ -> 
-        proc inp -> do 
-                r <- now ()                                     -< ()
-                t <- time                                       -< ()
-                arr (\ (t,r) -> tagWith t r) -< (t,r)
+        proc _ -> do 
+              r <- now ()                                     -< ()
+              t <- time                                       -< ()
+              arr (\ (t,r) -> tagWith t r) -< (t,r)
 
 -- This is a type of bind!
 --bind :: SF a (Event b) -> (b -> SF a (Event b)) -> SF a (Event b)
