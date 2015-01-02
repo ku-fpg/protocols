@@ -17,7 +17,11 @@ cabal-version:       >=1.10
 
 executable protocols
   main-is:             Main.hs
-  -- other-modules:       
+  other-modules:       FRP.Yampa.Canvas.Timeline
+                       FRP.Yampa.Canvas.Utils
+                       FRP.Yampa.Canvas.Virtual
+                       FRP.Yampa.Canvas.Waveform
+                       FRP.Yampa.Protocol.RS232
   -- other-extensions:    
   build-depends:       base         >= 4.7 && < 4.9,
                        blank-canvas >= 0.5 && < 0.6,
