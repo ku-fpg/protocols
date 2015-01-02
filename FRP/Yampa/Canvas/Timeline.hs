@@ -7,18 +7,11 @@ module FRP.Yampa.Canvas.Timeline
 
 import Graphics.Blank hiding (Event)
 import FRP.Yampa
-import FRP.Yampa.Vector2
 import Data.Text(Text,pack)
-import Data.Monoid((<>))
-import Control.Arrow
-import System.Random(mkStdGen)
 import Text.Printf
 import Data.Default
 
-import FRP.Yampa.Canvas
-
 import FRP.Yampa.Canvas.Utils
-
 
 data Timeline a = Timeline
         { timelineRealEstate  :: (Double,Double)        -- ^ size on screen
@@ -32,7 +25,7 @@ instance Default (Timeline a) where
 
 -- The pure painter
 timelinePaint :: Timeline a -> [(Time,Event a)] -> Canvas ()
-timelinePaint tl ts | length ts < 1 = return ()
+timelinePaint _  ts | length ts < 1 = return ()
 timelinePaint tl ts = do
         strokeStyle "blue"
         -- find y-axis
@@ -59,7 +52,7 @@ timelinePaint tl ts = do
 
   where ts1 = [ (t,e) | (t,Just e) <- [ (t,event Nothing Just ev) | (t,ev) <- ts ] ]
         mx = maximum $ map fst ts
-        (w,h) = timelineRealEstate tl
+        (w,_) = timelineRealEstate tl
 
 -- The signal function version. The only SF part is the scopeSF
 timelineSF :: Timeline a -> SF (Event a) (Canvas ())
