@@ -3,7 +3,6 @@ module FRP.Yampa.Canvas.Virtual (reactimateVirtualSFinContext) where
 
 import FRP.Yampa
 
-import Data.Time.Clock
 import Data.IORef
 import Control.Concurrent.STM
 

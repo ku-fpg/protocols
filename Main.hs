@@ -3,12 +3,8 @@ module Main where
 
 import Graphics.Blank hiding (Event)
 import FRP.Yampa
-import System.Random(mkStdGen)
 import Data.Default
-
-import FRP.Yampa.Canvas
-
-import FRP.Yampa.Canvas.Utils 
+ 
 import FRP.Yampa.Canvas.Waveform 
 import FRP.Yampa.Canvas.Timeline
 import FRP.Yampa.Canvas.Virtual
@@ -16,9 +12,6 @@ import FRP.Yampa.Canvas.Virtual
 import FRP.Yampa.Protocol.RS232
 
 import Text.Printf
-
-import Data.Word (Word8)
-import Data.Bits
 
 main :: IO ()
 main = blankCanvas 3000 $
@@ -49,7 +42,7 @@ program = proc _inp -> do
                                      ]) -< [r6,r7,r8,r2,r3]
 
 
-	returnA -< rs
+        returnA -< rs
   where baud = 1
         timeslice = 100
 -----------------------------------------------

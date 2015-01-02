@@ -11,13 +11,13 @@ import FRP.Yampa
 scopeSF :: Double -> SF a [(Time,a)]
 scopeSF d = proc inp -> do
          t <- time -< ()
-	 sscan (\ vs (tm,v) -> (tm,v) : [ v' | v'@(tm',_) <- vs,  tm'  >= tm - d ]) [] -< (t,inp)
+         sscan (\ vs (tm,v) -> (tm,v) : [ v' | v'@(tm',_) <- vs,  tm'  >= tm - d ]) [] -< (t,inp)
 
 -- | How may samples per second?
 spsSF :: SF () Double
 spsSF = time >>> sscan (\ vs tm -> tm : [ v | v <- vs, v >= tm - 1]) [] >>> arr len
   where len []  = 0
-        len [x] = 1
+        len [_] = 1
         len xs  = fromIntegral (length xs) / (maximum xs - minimum xs) 
 
 {-
